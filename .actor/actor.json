@@ -4,6 +4,6 @@
 	"version": "0.0",
 	"buildTag": "latest",
 	"environmentVariables": {},
-	"dockerfile": null,
+	"dockerfile": "Dockerfile",
     "entrypoint": "src/main.py"
 }

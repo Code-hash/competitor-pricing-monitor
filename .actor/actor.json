@@ -1,0 +1,9 @@
+{
+	"actorSpecification": 1,
+	"name": "competitor-pricing-monitor",
+	"version": "0.0",
+	"buildTag": "latest",
+	"environmentVariables": {},
+	"dockerfile": null,
+    "entrypoint": "src/main.py"
+}

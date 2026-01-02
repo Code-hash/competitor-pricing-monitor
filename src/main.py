@@ -1,22 +1,25 @@
 from apify import Actor
 import requests
+import asyncio
 
 async def main():
     async with Actor:
+        Actor.log.info("Actor started")
+
         input_data = await Actor.get_input() or {}
         urls = input_data.get("urls", [])
 
         Actor.log.info(f"Received URLs: {urls}")
 
         if not urls:
-            Actor.log.error("No URLs provided in input")
+            Actor.log.error("No URLs provided")
             return
 
         results = []
 
         for url in urls:
             try:
-                Actor.log.info(f"Requesting {url}")
+                Actor.log.info(f"Fetching {url}")
 
                 response = requests.get(
                     url,
@@ -26,9 +29,7 @@ async def main():
                     }
                 )
 
-                Actor.log.info(f"{url} → status {response.status_code}")
-
-                response.raise_for_status()
+                Actor.log.info(f"{url} → {response.status_code}")
 
                 results.append({
                     "url": url,
@@ -37,7 +38,10 @@ async def main():
                 })
 
             except Exception as e:
-                Actor.log.error(f"Failed to fetch {url}: {e}")
+                Actor.log.error(f"Error fetching {url}: {e}")
 
-        Actor.log.info(f"Pushing {len(results)} records to dataset")
+        Actor.log.info(f"Pushing {len(results)} items to dataset")
         await Actor.push_data(results)
+
+if __name__ == "__main__":
+    asyncio.run(main())

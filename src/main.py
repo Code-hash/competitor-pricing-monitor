@@ -2,22 +2,19 @@ from apify import Actor
 import requests
 import asyncio
 import hashlib
+import re
 from bs4 import BeautifulSoup
 
 
 def normalize_price(price_text):
     if not price_text:
         return None
-    cleaned = (
-        price_text.replace("£", "")
-        .replace("$", "")
-        .replace(",", "")
-        .strip()
-    )
-    try:
-        return float(cleaned)
-    except ValueError:
+
+    match = re.search(r"[\d,.]+", price_text)
+    if not match:
         return None
+
+    return float(match.group().replace(",", ""))
 
 
 async def main():
@@ -30,8 +27,6 @@ async def main():
         if not urls:
             Actor.log.error("No URLs provided in input")
             return
-
-        results = []
 
         for url in urls:
             Actor.log.info(f"Checking price for {url}")
@@ -51,7 +46,6 @@ async def main():
             current_price_text = price_el.text.strip() if price_el else None
             current_price = normalize_price(current_price_text)
 
-            # SAFE KEY FOR APIFY STORAGE
             url_hash = hashlib.sha256(url.encode()).hexdigest()
             store_key = f"PRICE_{url_hash}"
 
@@ -70,24 +64,20 @@ async def main():
             else:
                 change_type = "no_change"
 
-            # STORE ONLY LATEST PRICE (OVERWRITE)
             await Actor.set_value(store_key, current_price)
-
-            result = {
-                "url": url,
-                "oldPrice": previous_price,
-                "newPrice": current_price,
-                "changeType": change_type,
-            }
-
-            results.append(result)
 
             Actor.log.info(
                 f"{url} | old={previous_price} new={current_price} change={change_type}"
             )
 
-        # OUTPUT RESULT
-        await Actor.push_data(results)
+            # WRITE ONLY MEANINGFUL EVENTS
+            if change_type != "no_change":
+                await Actor.push_data({
+                    "url": url,
+                    "oldPrice": previous_price,
+                    "newPrice": current_price,
+                    "changeType": change_type,
+                })
 
 
 if __name__ == "__main__":

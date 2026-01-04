@@ -9,8 +9,15 @@
       "items": {
         "type": "object",
         "properties": {
-          "url": { "type": "string", "format": "uri" },
-          "priceSelector": { "type": "string" }
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Product or pricing page URL"
+          },
+          "priceSelector": {
+            "type": "string",
+            "description": "CSS selector pointing to the price element"
+          }
         },
         "required": ["url", "priceSelector"]
       }

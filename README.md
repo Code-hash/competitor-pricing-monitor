@@ -93,8 +93,7 @@ Events with `no_change` are intentionally not written to the dataset.
     }
   ]
 }
-## Output Format (Dataset)
-```json
+Output Format (Dataset):
 {
   "url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
   "oldPrice": 51.77,

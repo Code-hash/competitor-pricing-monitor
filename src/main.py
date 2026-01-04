@@ -22,13 +22,16 @@ async def main():
         Actor.log.info("Pricing monitor started")
 
         input_data = await Actor.get_input() or {}
-        urls = input_data.get("urls", [])
+        items = input_data.get("items", [])
 
-        if not urls:
-            Actor.log.error("No URLs provided in input")
+        if not items:
+            Actor.log.error("No items provided in input")
             return
 
-        for url in urls:
+        for item in items:
+            url = item["url"]
+            selector = item["priceSelector"]
+
             Actor.log.info(f"Checking price for {url}")
 
             response = requests.get(
@@ -41,7 +44,7 @@ async def main():
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, "html.parser")
-            price_el = soup.select_one(".price_color")
+            price_el = soup.select_one(selector)
 
             current_price_text = price_el.text.strip() if price_el else None
             current_price = normalize_price(current_price_text)

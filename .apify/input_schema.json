@@ -1,19 +1,20 @@
 {
   "schemaVersion": 1,
-  "title": "Pricing Monitor Input",
-  "description": "Monitor competitor pricing pages for meaningful changes",
+  "title": "Competitor Pricing Monitor",
   "type": "object",
   "properties": {
-    "urls": {
+    "items": {
       "type": "array",
-      "title": "Pricing page URLs",
+      "title": "Products to monitor",
       "items": {
-        "type": "string",
-        "format": "uri"
-      },
-      "minItems": 1,
-      "description": "One or more competitor pricing page URLs"
+        "type": "object",
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "priceSelector": { "type": "string" }
+        },
+        "required": ["url", "priceSelector"]
+      }
     }
   },
-  "required": ["urls"]
+  "required": ["items"]
 }

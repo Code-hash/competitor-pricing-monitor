@@ -22,7 +22,7 @@ async def main():
         Actor.log.info("Pricing monitor started")
 
         # Open a NAMED key-value store (persistent across runs)
-        store = await Actor.open_key_value_store("pricing-state")
+        store = await Actor.open_key_value_store(store_name="pricing-state")
 
         input_data = await Actor.get_input() or {}
         items = input_data.get("items", [])

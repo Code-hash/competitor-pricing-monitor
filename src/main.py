@@ -5,82 +5,60 @@ import hashlib
 import re
 from bs4 import BeautifulSoup
 
-
-def normalize_price(price_text):
-    if not price_text:
+def normalize_price(text):
+    if not text:
         return None
-
-    match = re.search(r"[\d,.]+", price_text)
-    if not match:
-        return None
-
-    return float(match.group().replace(",", ""))
-
+    m = re.search(r"[\d,.]+", text)
+    return float(m.group().replace(",", "")) if m else None
 
 async def main():
     async with Actor:
-        Actor.log.info("Pricing monitor started")
-
         input_data = await Actor.get_input() or {}
         items = input_data.get("items", [])
 
         if not items:
-            Actor.log.error("No items provided in input")
+            Actor.log.error("No items provided")
             return
+
+        existing = {}
+        async for row in Actor.open_dataset():
+            existing[row["key"]] = row
 
         for item in items:
             url = item["url"]
             selector = item["priceSelector"]
+            key = hashlib.sha256(url.encode()).hexdigest()
 
-            Actor.log.info(f"Checking price for {url}")
+            res = requests.get(url, timeout=30, headers={
+                "User-Agent": "Mozilla/5.0 (PricingMonitorBot/1.0)"
+            })
+            res.raise_for_status()
 
-            response = requests.get(
-                url,
-                timeout=30,
-                headers={
-                    "User-Agent": "Mozilla/5.0 (PricingMonitorBot/1.0)"
-                },
-            )
-            response.raise_for_status()
+            soup = BeautifulSoup(res.text, "html.parser")
+            el = soup.select_one(selector)
+            current = normalize_price(el.text.strip() if el else None)
 
-            soup = BeautifulSoup(response.text, "html.parser")
-            price_el = soup.select_one(selector)
+            prev = existing.get(key, {}).get("newPrice")
 
-            current_price_text = price_el.text.strip() if price_el else None
-            current_price = normalize_price(current_price_text)
-
-            url_hash = hashlib.sha256(url.encode()).hexdigest()
-            store_key = f"PRICE_{url_hash}"
-
-            # DEFAULT KVS (PERSISTENT IN TASK RUNS)
-            previous_price = await Actor.get_value(store_key)
-
-            if previous_price is None:
-                change_type = "first_seen"
-            elif current_price is None:
-                change_type = "price_not_found"
-            elif current_price > previous_price:
-                change_type = "increase"
-            elif current_price < previous_price:
-                change_type = "decrease"
+            if prev is None:
+                change = "first_seen"
+            elif current is None:
+                change = "price_not_found"
+            elif current > prev:
+                change = "increase"
+            elif current < prev:
+                change = "decrease"
             else:
-                change_type = "no_change"
+                change = "no_change"
 
-            # overwrite latest price only
-            await Actor.set_value(store_key, current_price)
-
-            Actor.log.info(
-                f"{url} | old={previous_price} new={current_price} change={change_type}"
-            )
-
-            if change_type != "no_change":
+            if change != "no_change":
                 await Actor.push_data({
+                    "key": key,
                     "url": url,
-                    "oldPrice": previous_price,
-                    "newPrice": current_price,
-                    "changeType": change_type,
+                    "oldPrice": prev,
+                    "newPrice": current,
+                    "changeType": change,
                 })
-
 
 if __name__ == "__main__":
     asyncio.run(main())
